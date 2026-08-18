@@ -1,0 +1,10 @@
+k8coins
+
+Adapted from DockerCoins, part of jpetazzo/container.training
+(https://github.com/jpetazzo/container.training), Copyright Jerome
+Petazzoni and contributors, licensed under the Apache License 2.0.
+
+Changes made: services renamed and Dockerfiles rewritten for multi-stage
+builds, pinned dependencies, non-root users, and healthchecks. Application
+logic (rng, hasher, worker, webui) is functionally the same as the
+original with minor adaptations noted in each service's source comments.
