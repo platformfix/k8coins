@@ -312,16 +312,22 @@ RUN bundle config set --local deployment 'true' && bundle install
 
 FROM ruby:3.3-alpine
 WORKDIR /app
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -g 1000 -S app && adduser -u 1000 -S app -G app
 COPY --from=builder /app/vendor/bundle vendor/bundle
 COPY --from=builder /app/.bundle .bundle
 COPY --from=builder /usr/local/bundle /usr/local/bundle
 COPY Gemfile Gemfile.lock hasher.rb .
-USER app
+USER 1000
 EXPOSE 80
-HEALTHCHECK --interval=10s --timeout=3s CMD wget -q -O- http://localhost:80/ || exit 1
+HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/"]
 CMD ["bundle", "exec", "ruby", "hasher.rb"]
 ```
+
+(Numeric UID and exec-form `HEALTHCHECK`, matching the pattern Task 2's implementer established
+and hardened via hadolint findings DL3066 and DL3025, numeric UIDs resolve reliably for
+Kubernetes's `runAsNonRoot` check and static-analysis tooling in a way named users don't always,
+exec-form avoids an unnecessary shell. Use the same pattern here for consistency across the repo,
+don't reintroduce the named-user/shell-form version this plan originally specified.)
 
 (The exact set of paths to copy out of the builder stage depends on where `bundle install --deployment` actually puts things for the Ruby/bundler version you end up pinning, verify this empirically in Step 4 rather than trusting the paths above blindly, adjust if the build fails or the final image is missing gems.)
 
@@ -464,17 +470,21 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 WORKDIR /app
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -g 1000 -S app && adduser -u 1000 -S app -G app
 COPY --from=builder /root/.local /home/app/.local
 COPY worker.py .
 ENV PATH=/home/app/.local/bin:$PATH
-USER app
-HEALTHCHECK --interval=15s --timeout=3s \
-  CMD pgrep -f worker.py || exit 1
+USER 1000
+HEALTHCHECK --interval=15s --timeout=3s CMD ["pgrep", "-f", "worker.py"]
 CMD ["python", "worker.py"]
 ```
+
+(Base image corrected to `python:3.14-alpine`, the real current version Task 2's implementer
+verified and pinned, this plan originally said 3.13 here, stale by the time this task was
+written. Numeric UID and exec-form `HEALTHCHECK`, same reasoning and same consistency
+requirement as Task 3's note above.)
 
 - [ ] **Step 4: Build and verify locally (needs rng, hasher, and redis running)**
 
@@ -623,11 +633,17 @@ WORKDIR /app
 COPY --from=builder /app/node_modules node_modules
 COPY package.json webui.js .
 COPY files files
-USER node
+USER 1000
 EXPOSE 80
-HEALTHCHECK --interval=10s --timeout=3s CMD wget -q -O- http://localhost:80/index.html || exit 1
+HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/index.html"]
 CMD ["node", "webui.js"]
 ```
+
+(Numeric UID, not the named `node` user, and exec-form `HEALTHCHECK`, matching the pattern
+Task 2 established. `node:*-alpine` images ship a built-in `node` user at UID 1000, so `USER 1000`
+here is the same identity as `USER node`, just expressed the way Kubernetes's `runAsNonRoot`
+check and static-analysis tooling resolve reliably. No `addgroup`/`adduser` needed, unlike Tasks
+2-4, since this user already exists in the base image.)
 
 (`node:*-alpine` images ship a built-in `node` user already, no need to create one, unlike the Python and Ruby base images.)
 
