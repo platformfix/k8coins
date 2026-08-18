@@ -11,6 +11,8 @@ WORKDIR /app
 RUN addgroup -g 1000 -S app && adduser -u 1000 -S app -G app
 COPY --from=builder /root/.local /home/app/.local
 COPY rng.py .
+# FLASK_RUN_HOST=:: binds both IPv4 and IPv6, since the compose healthcheck
+# probes over IPv4 while Kubernetes probes may use either.
 ENV PATH=/home/app/.local/bin:$PATH \
     FLASK_APP=rng \
     FLASK_RUN_HOST=:: \
