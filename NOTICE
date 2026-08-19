@@ -4,7 +4,9 @@ Adapted from DockerCoins, part of jpetazzo/container.training
 (https://github.com/jpetazzo/container.training), Copyright Jerome
 Petazzoni and contributors, licensed under the Apache License 2.0.
 
-Changes made: services renamed and Dockerfiles rewritten for multi-stage
-builds, pinned dependencies, non-root users, and healthchecks. Application
-logic (rng, hasher, worker, webui) is functionally the same as the
-original with minor adaptations noted in each service's source comments.
+Changes made: Dockerfiles rewritten for multi-stage builds, non-root
+users, and healthchecks; dependency manifests (requirements.txt, Gemfile,
+package.json and their lockfiles) added where the original installed
+packages at build time. Application logic (rng, hasher, worker, webui) is
+functionally the same as the original, apart from a Sinatra
+host-authorization setting in hasher.rb that is commented in place.

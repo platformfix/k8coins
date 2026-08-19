@@ -27,9 +27,12 @@ DockerCoins. See [Attribution](#attribution).
 | `webui` | Node.js (Express) | Reads the current rate from redis and serves it to the browser |
 | `redis` | off-the-shelf (`redis:7-alpine`) | Holds the running counters |
 
-`worker` is the only service with real logic. Every second of runtime, it
+`worker` is the only service with real logic. In a continuous loop, it
 asks `rng` for 32 random bytes, sends those bytes to `hasher`, and checks
-whether the returned SHA-2 hash starts with `0`. If it does, that's a coin:
+whether the returned SHA-2 hash starts with `0`. Deliberate sleeps in
+`rng`, `hasher`, and `worker` itself hold that loop to roughly three
+attempts a second, slow enough to watch a counter move. If the hash does
+start with `0`, that's a coin:
 the hash and the bytes that produced it go into a redis hash called
 `wallet`. Either way, `worker` tallies how many hash attempts it made and
 periodically adds that count to a redis counter called `hashes`. `webui`
@@ -48,11 +51,11 @@ flowchart LR
     Browser -->|GET /json| WebUI
 ```
 
-No service talks to more than one downstream neighbor. `rng` and `hasher`
-never touch redis directly; `webui` never talks to `rng`, `hasher`, or
-`worker`. That's on purpose: it's what makes the app a useful teaching
-target for service discovery, network policy, and failure isolation
-exercises. Kill `hasher` mid-workshop and `worker` stalls, but `webui`
+The dependency graph is deliberately narrow. `worker` is the only service
+that calls more than one neighbour; `rng` and `hasher` never touch redis,
+and `webui` never talks to `rng`, `hasher`, or `worker`. That keeps the
+app a useful teaching target for service discovery, network policy, and
+failure isolation exercises. Kill `hasher` mid-workshop and `worker` stalls, but `webui`
 keeps serving whatever counts it last read.
 
 ## Running locally
@@ -84,9 +87,15 @@ ghcr.io/platformfix/k8coins-worker:<version>
 ghcr.io/platformfix/k8coins-webui:<version>
 ```
 
-`redis` isn't built by this repo; use the upstream `redis:7-alpine` image
-directly. The images are currently private, matching this repo's
-visibility, and will open up if and when the repo does.
+`redis` isn't built by this repo; pull the upstream `redis:7-alpine` image
+directly.
+
+The four published images are private, inherited from this repo's own
+visibility at the time they were first pushed. GHCR package visibility
+does not follow the repository, so opening this repo up also means
+flipping each of the four packages to public under the org's package
+settings. Until someone does that, an external `docker pull` gets a
+denial rather than the image.
 
 ## Versioning and releases
 
@@ -111,7 +120,12 @@ doubles as a reference for the practices it demonstrates:
 - **Multi-stage builds.** Build tooling (`build-base` for the Ruby gem with
   a native extension, `pip`/`npm` install caches) lives only in the
   builder stage. The final image copies across installed dependencies and
-  application code, nothing else.
+  application code, nothing else. Each final stage is still the language's
+  own Alpine image rather than a distroless one, so it keeps that
+  language's package manager (`pip`, `gem`, `npm`). Dropping those would
+  shrink the attack surface further, at the cost of being able to shell
+  into a running container mid-workshop and look around, which is the
+  whole point of several of the exercises.
 - **Numeric UID, not a named user.** Each image creates and runs as UID
   1000 rather than a named non-root user. Kubernetes' `runAsNonRoot`
   check and most static-analysis tooling resolve a numeric UID reliably
@@ -121,15 +135,24 @@ doubles as a reference for the practices it demonstrates:
 - **Pinned dependencies.** `requirements.txt` pins exact versions,
   `Gemfile.lock` locks exact gem versions, and `webui` installs from
   `package-lock.json` via `npm ci`. The Ruby build stage also pins the
-  Alpine `build-base` package to an exact version. A rebuild six months
-  from now installs the same thing it installed today.
+  Alpine `build-base` package to an exact version, strictly enough that
+  the build fails loudly rather than drifting quietly once Alpine rotates
+  that package out. The pinning stops at direct dependencies, though.
+  Transitive Python packages still resolve at build time, and the `FROM`
+  lines track a minor tag rather than a digest, so a rebuild months from
+  now is close to reproducible, not bit-for-bit identical. Hash-locked
+  `pip-compile` output and digest-pinned base images are the next step if
+  this ever needs to be auditable.
 - **Exec-form healthchecks.** `HEALTHCHECK CMD` is always the JSON-array
   form (`["wget", "-q", ...]`), never a bare shell string. Shell form runs
   the command through `/bin/sh -c`, which becomes the process that
   receives signals instead of the command itself; exec form avoids that
   and satisfies hadolint's DL3025.
-- **hadolint in CI.** Every PR lints all four Dockerfiles with hadolint
-  before anything builds, so a broken Dockerfile never reaches `main`.
+- **hadolint in CI.** Every pull request lints all four Dockerfiles with
+  hadolint and then builds each image without pushing it, so a Dockerfile
+  that fails the linter or the build shows up on the PR before it merges.
+  Branch protection isn't enabled on this repo yet, so the check reports
+  rather than blocks.
 
 ## Attribution
 
