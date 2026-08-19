@@ -15,5 +15,5 @@ COPY files files
 # no addgroup/adduser line, unlike the Python and Ruby services.
 USER 1000
 EXPOSE 80
-HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/index.html"]
+HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/healthz"]
 CMD ["node", "webui.js"]

@@ -19,5 +19,5 @@ ENV PATH=/home/app/.local/bin:$PATH \
     FLASK_RUN_PORT=80
 USER 1000
 EXPOSE 80
-HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/"]
+HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://localhost:80/healthz"]
 CMD ["python", "-m", "flask", "run", "--without-threads"]

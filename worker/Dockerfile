@@ -13,5 +13,9 @@ COPY --from=builder /root/.local /home/app/.local
 COPY worker.py .
 ENV PATH=/home/app/.local/bin:$PATH
 USER 1000
-HEALTHCHECK --interval=15s --timeout=3s CMD ["pgrep", "-f", "worker.py"]
+EXPOSE 80
+# Probes 127.0.0.1 rather than localhost because this image resolves
+# localhost to ::1 first, and the metrics server's bind '0.0.0.0' is
+# IPv4-only (same fix as hasher's Dockerfile).
+HEALTHCHECK --interval=15s --timeout=3s CMD ["wget", "-q", "-O-", "http://127.0.0.1:80/healthz"]
 CMD ["python", "worker.py"]

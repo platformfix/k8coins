@@ -69,11 +69,23 @@ This builds and starts all five services:
 - webui: [http://localhost:8000](http://localhost:8000)
 - rng: [http://localhost:8001](http://localhost:8001)
 - hasher: [http://localhost:8002](http://localhost:8002)
+- worker: [http://localhost:8003](http://localhost:8003) (health and metrics
+  only; `worker` has no business-facing HTTP surface)
 
-`worker` and `redis` aren't exposed to the host; they only need to be
-reachable from the other containers, which Compose handles via the
-default network. Give it 10-15 seconds, then check `http://localhost:8000/json`
-for a non-zero `hashes` count.
+`redis` isn't exposed to the host; it only needs to be reachable from the
+other containers, which Compose handles via the default network. Give it
+10-15 seconds, then check `http://localhost:8000/json` for a non-zero
+`hashes` count.
+
+## Health and metrics
+
+Every service exposes `/healthz`, `/live`, and `/metrics` (Prometheus text
+format) on its own port. `worker` is the interesting one: it has no other
+HTTP surface, so this is the only way to see it directly. Its `/metrics`
+carries the real counters (`k8coins_hashes_total`, `k8coins_coins_total`);
+`/healthz` reports unhealthy if it hasn't completed a real round trip to
+`rng` and `hasher` in the last 30 seconds, not merely whether the process is
+still running.
 
 ## Published images
 

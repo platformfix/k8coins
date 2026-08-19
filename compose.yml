@@ -20,3 +20,5 @@ services:
 
   worker:
     build: worker
+    ports:
+      - "8003:80"

@@ -17,5 +17,5 @@ USER 1000
 EXPOSE 80
 # Probes 127.0.0.1 rather than localhost because this image resolves
 # localhost to ::1 first, and Sinatra's bind '0.0.0.0' is IPv4-only.
-HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://127.0.0.1:80/"]
+HEALTHCHECK --interval=10s --timeout=3s CMD ["wget", "-q", "-O-", "http://127.0.0.1:80/healthz"]
 CMD ["bundle", "exec", "ruby", "hasher.rb"]
