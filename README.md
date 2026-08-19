@@ -129,8 +129,7 @@ doubles as a reference for the practices it demonstrates:
   receives signals instead of the command itself; exec form avoids that
   and satisfies hadolint's DL3025.
 - **hadolint in CI.** Every PR lints all four Dockerfiles with hadolint
-  before anything builds. The same check runs locally during development,
-  so lint failures show up before a PR does, not after.
+  before anything builds, so a broken Dockerfile never reaches `main`.
 
 ## Attribution
 
