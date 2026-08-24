@@ -130,7 +130,17 @@ theoretical "good practice" bullets that never actually bit anyone here.
   *before* pushing the rewritten `main`, or the workflow will read zero
   prior tags, infer a bump from the wrong base, and fire off an unintended
   image build and release. Check the workflow's own version-bump logic in
-  `.github/workflows/release.yml` before touching `main` outside a normal PR merge.
+  `.github/workflows/release.yml` before touching `main` outside a normal PR
+  merge. A `concurrency: group: release-main` block (added 2026-08-24, after
+  this bit for real) queues overlapping runs rather than letting them race -
+  before that fix, merging several PRs back to back (5 merged ~15s apart)
+  caused all 5 runs to read the same last tag before any had pushed a new
+  one, so all 5 computed the same next version and only the first to push
+  won; the other 4 failed with "tag already exists," and the git tag/release
+  for that version ended up pointing at an older commit than what actually
+  got published under that image tag. If you're merging multiple PRs in a
+  row, prefer spacing them out slightly even with the concurrency fix in
+  place, since each queued run still produces its own separate release.
 - **Required review on the `main` branch ruleset is 0, by design, not
   oversight** - same reasoning as [podium's](https://github.com/platformfix/podium):
   every PR here is authored under Steve's own GitHub identity, and GitHub
