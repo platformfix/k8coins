@@ -71,6 +71,11 @@ jobs:
     needs: version
     if: needs.version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         service: [rng, hasher, worker, webui]
@@ -85,6 +90,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v7
         with:
           context: ./${{ matrix.service }}
@@ -92,6 +98,33 @@ jobs:
           tags: |
             ghcr.io/platformfix/k8coins-${{ matrix.service }}:${{ needs.version.outputs.version }}
             ghcr.io/platformfix/k8coins-${{ matrix.service }}:latest
+
+      # Signed SLSA build provenance, verifiable with "gh attestation verify".
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/platformfix/k8coins-${{ matrix.service }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      # SPDX SBOM for the exact image just pushed (pinned to its digest, not
+      # a floating tag), attested and attached alongside the provenance.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          image: ghcr.io/platformfix/k8coins-${{ matrix.service }}@${{ steps.push.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest SBOM
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/platformfix/k8coins-${{ matrix.service }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: sbom.spdx.json
+          push-to-registry: true
 
   tag-and-release:
     needs: [version, release]
