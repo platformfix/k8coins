@@ -1,12 +1,12 @@
 # Build stage: resolve node_modules from the lockfile, production only.
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 # Final stage: copy only the resolved modules and app code, no npm cache,
 # no dev dependencies.
-FROM node:24-alpine
+FROM node:26-alpine
 WORKDIR /app
 COPY --from=builder /app/node_modules node_modules
 COPY package.json webui.js ./
