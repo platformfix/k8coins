@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+  - package-ecosystem: "docker"
+    directory: "/rng"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+  - package-ecosystem: "docker"
+    directory: "/hasher"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+  - package-ecosystem: "docker"
+    directory: "/worker"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+  - package-ecosystem: "docker"
+    directory: "/webui"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
