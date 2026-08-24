@@ -4,6 +4,20 @@ on:
   push:
     branches: [main]
 
+# Multiple pushes to main in quick succession (e.g. merging several PRs back
+# to back) each trigger their own run of this workflow. Without this,
+# concurrent runs' "version" jobs all read the same last tag before any of
+# them has pushed a new one, compute the same next version, and race to
+# create the same git tag - only the first to push wins, the rest fail with
+# "tag already exists" (seen live on 2026-08-24 merging 5 PRs ~15s apart:
+# all 5 computed v0.3.4, only one succeeded). cancel-in-progress: false
+# queues runs instead of cancelling them, so each one starts only after the
+# previous has fully finished (including its own tag push) and sees the
+# correct, up-to-date last tag.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
