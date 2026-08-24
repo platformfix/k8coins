@@ -1,0 +1,16 @@
+k8coins is deployed. Give it 10-15 seconds, then check the mining loop:
+
+{{- if .Values.ingress.enabled }}
+
+  http://{{ .Values.ingress.host }}{{ .Values.ingress.path }}json
+
+{{- else }}
+
+  kubectl port-forward svc/webui 8000:80 --namespace {{ .Release.Namespace }}
+  curl http://localhost:8000/json
+
+{{- end }}
+
+A non-zero and increasing "hashes" count means the whole loop (worker ->
+rng -> hasher -> redis -> webui) is actually working, not just that pods
+started.
