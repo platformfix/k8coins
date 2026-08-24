@@ -1,0 +1,50 @@
+name: e2e
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mining-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for webui readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/healthz >/dev/null; then
+              echo "webui is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "webui did not become healthy within 60s"
+          exit 1
+
+      - name: Assert the mining loop is actually progressing
+        run: |
+          first=$(curl -sf http://localhost:8000/json | jq -r .hashes)
+          echo "hashes at t=0: $first"
+          sleep 15
+          second=$(curl -sf http://localhost:8000/json | jq -r .hashes)
+          echo "hashes at t=15s: $second"
+          if [ "$second" -le "$first" ]; then
+            echo "hashes counter did not increase in 15s - the mining loop is not progressing"
+            exit 1
+          fi
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down
