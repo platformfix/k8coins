@@ -1,5 +1,13 @@
 # k8coins
 
+[![PR checks](https://github.com/platformfix/k8coins/actions/workflows/pr-check.yml/badge.svg)](https://github.com/platformfix/k8coins/actions/workflows/pr-check.yml)
+[![e2e](https://github.com/platformfix/k8coins/actions/workflows/e2e.yml/badge.svg)](https://github.com/platformfix/k8coins/actions/workflows/e2e.yml)
+[![commit-lint](https://github.com/platformfix/k8coins/actions/workflows/commit-lint.yaml/badge.svg)](https://github.com/platformfix/k8coins/actions/workflows/commit-lint.yaml)
+[![pr-lint](https://github.com/platformfix/k8coins/actions/workflows/pr-lint.yml/badge.svg)](https://github.com/platformfix/k8coins/actions/workflows/pr-lint.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/platformfix/k8coins/badge)](https://scorecard.dev/viewer/?uri=github.com/platformfix/k8coins)
+[![Latest Release](https://img.shields.io/github/v/release/platformfix/k8coins)](https://github.com/platformfix/k8coins/releases)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 A small polyglot microservices app used as the throughline demo in Platform
 Fix's Kubernetes workshops. Five services, four languages. An orchestrator
 doesn't care what runtime a service is written in. It cares whether the
@@ -184,8 +192,17 @@ doubles as a reference for the practices it demonstrates:
 - **hadolint in CI.** Every pull request lints all four Dockerfiles with
   hadolint and then builds each image without pushing it, so a Dockerfile
   that fails the linter or the build shows up on the PR before it merges.
-  Branch protection isn't enabled on this repo yet, so the check reports
-  rather than blocks.
+  A branch ruleset requires every change to land via PR, so a failing check
+  is visible before merge even though it isn't (yet) a required status check
+  - see [CLAUDE.md](CLAUDE.md#constraints-that-matter) for the current state
+  of what's actually required to merge.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build and test locally.
+Commits and pull request titles must follow
+[Conventional Commits](https://www.conventionalcommits.org/); this is
+enforced by CI. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Attribution
 
