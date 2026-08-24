@@ -22,7 +22,7 @@ DockerCoins - see [`NOTICE`](NOTICE) for what changed.
 ## Running locally
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 Give it 10-15 seconds, then check `http://localhost:8000/json` for a
