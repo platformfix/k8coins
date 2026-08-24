@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>k8coins · Live Mining Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230A0F1C'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23D4A843'/%3E%3C/svg%3E">
+<link rel="stylesheet" type="text/css" href="rickshaw.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --pf-field: #F0EFE8;
+    --pf-ink: #1F2937;
+    --pf-ink-secondary: #374151;
+    --pf-navy: #0A0F1C;
+    --pf-gold: #D4A843;
+    --pf-green: #22C55E;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
+    color: var(--pf-field);
+    background:
+        radial-gradient(circle at 12% -10%, rgba(212, 168, 67, 0.08), transparent 45%),
+        linear-gradient(160deg, #0A0F1C 0%, #0C1122 55%, #0E1428 100%);
+    background-attachment: fixed;
+}
+
+/* Faint dot-grid texture, matching the slide deck's title-plate treatment. */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(212, 168, 67, 0.6) 1px, transparent 0);
+    background-size: 40px 40px;
+    opacity: 0.03;
+    pointer-events: none;
+}
+
+.wrap {
+    position: relative;
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 56px 32px 40px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(240, 239, 232, 0.14);
+}
+
+.wordmark {
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 13px;
+    color: var(--pf-gold);
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(240, 239, 232, 0.45);
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(240, 239, 232, 0.3);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.status.is-live .status-dot {
+    background: var(--pf-green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+
+.status.is-live { color: rgba(240, 239, 232, 0.65); }
+
+main { padding-top: 44px; }
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.sub {
+    margin: 0 0 40px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: rgba(240, 239, 232, 0.55);
+    max-width: 42em;
+}
+
+.stat-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(240, 239, 232, 0.45);
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--pf-gold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.stat-unit {
+    font-size: 15px;
+    font-weight: 500;
+    color: rgba(240, 239, 232, 0.45);
+    margin-left: 8px;
+}
+
+.share {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--pf-gold);
+    border-radius: 6px;
+    color: var(--pf-field);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+}
+
+.share:hover { background: rgba(212, 168, 67, 0.1); }
+
+.card {
+    background: var(--pf-ink);
+    border: 1px solid var(--pf-ink-secondary);
+    border-radius: 12px;
+    padding: 22px 22px 8px;
+    box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.55);
+    overflow-x: auto;
+}
+
+footer {
+    margin-top: 44px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(240, 239, 232, 0.14);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(240, 239, 232, 0.35);
+}
+
+footer .brand {
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: rgba(240, 239, 232, 0.6);
+}
+
+/* Rickshaw ships its axis text/grid for a light background (.glow = black
+   fill). This card is dark, so re-tone them to the off-white field instead
+   of fighting Rickshaw's own theming with more specificity. */
+.rickshaw_graph .y_ticks.glow text {
+    fill: rgba(240, 239, 232, 0.5);
+    text-shadow: none;
+}
+.rickshaw_graph .y_ticks .tick line,
+.rickshaw_graph .x_ticks_d3 .tick {
+    stroke: rgba(240, 239, 232, 0.14);
+}
+.rickshaw_graph .y_grid .tick,
+.rickshaw_graph .x_grid_d3 .tick {
+    stroke: rgba(240, 239, 232, 0.07);
+}
+
+@media (max-width: 520px) {
+    .wrap { padding: 36px 20px 28px; }
+    .stat-value { font-size: 40px; }
+}
+</style>
+<script src="jquery-1.11.3.min.js"></script>
+<script src="d3.min.js"></script>
+<script src="rickshaw.min.js"></script>
+<script>
+
+var series = [];
+var points = []
+var graph = null;
+var live = false;
+
+function refresh () {
+    $.ajax({ url: "json" }).done(function (data) {
+        if (!live) {
+            live = true;
+            $("#status").addClass("is-live");
+            $("#statusText").text("Live");
+        }
+        series.push(data);
+        while (series.length < 250) {
+            data = JSON.parse(JSON.stringify(data));
+            data.now -= 1;
+            series.unshift(data);
+        }
+        while (series.length > 250) {
+            series.shift();
+        }
+        while (points.length > 0) {
+            points.pop();
+        }
+        var speed;
+        for (var i=0; i<series.length-1; i++) {
+            // Compute instantaneous speed
+            var s1 = series[i];
+            var s2 = series[i+1];
+            speed = (s2.hashes-s1.hashes)/(s2.now-s1.now);
+            points.push({ x: s2.now, y: speed });
+        }
+        $("#speed").text(speed.toFixed(1));
+        var msg = ("I'm at a @platformfixer Kubernetes workshop, and my "
+                   + "k8coins mining rig is crunching " + speed.toFixed(1)
+                   + " hashes/second. #k8coins");
+        $("#tweet").attr(
+            "href",
+            "https://twitter.com/intent/tweet?text="+encodeURIComponent(msg)
+        );
+        if (graph == null) {
+            graph = new Rickshaw.Graph({
+                renderer: "line",
+                stroke: true,
+                width: 780,
+                height: 320,
+                element: $("#graph")[0],
+                preserve: true,
+                series: [
+                    { name: "Coins",
+                      color: "#D4A843",
+                      data: points
+                    }
+                ]
+            });
+            graph.render();
+            var yAxis = new Rickshaw.Graph.Axis.Y({
+                graph: graph,
+                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                ticksTreatment: "glow"
+            });
+            yAxis.render();
+        } else {
+            graph.update();
+            $("text").css({
+                "font-size": "13px",
+                "font-weight": "normal",
+                "opacity": 0.5,
+            });
+        }
+    });
+}
+
+$(function () {
+    setInterval(refresh, 1000);
+});
+</script>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <span class="wordmark">k8coins</span>
+  <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Connecting</span></span>
+</header>
+
+<main>
+  <h1>Real-time mining rate</h1>
+  <p class="sub">Tracking hash throughput across the k8coins mining fleet, straight from the cluster.</p>
+
+  <div class="stat-row">
+    <div>
+      <div class="stat-label">Current speed</div>
+      <div><span class="stat-value" id="speed">-</span><span class="stat-unit">hashes / second</span></div>
+    </div>
+    <a id="tweet" class="share" href="#" target="_blank" rel="noopener">Share on X</a>
+  </div>
+
+  <div class="card">
+    <div id="graph"></div>
+  </div>
+</main>
+
+<footer>
+  <span class="brand">Platform Fix</span>
+  <span>k8coins · Kubernetes workshop demo</span>
+</footer>
+
+</div>
+
+</body>
+</html>
