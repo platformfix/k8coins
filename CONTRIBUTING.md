@@ -23,7 +23,7 @@ pre-commit install --install-hooks
 ## Testing changes locally
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 Builds and starts all five services. Give it 10-15 seconds, then check `http://localhost:8000/json` - a non-zero and increasing `hashes` count means the whole loop (`worker` → `rng` → `hasher` → `redis` → `webui`) is actually working, not just that containers started.

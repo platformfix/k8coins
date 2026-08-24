@@ -74,7 +74,7 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 ## Building and testing locally
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 Builds and starts all five services. Give it 10-15 seconds, then check
