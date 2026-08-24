@@ -1,6 +1,18 @@
-# Project Instructions for AI Agents
+# k8coins
 
-This file provides instructions and context for AI coding agents working on this project.
+Operating guidance for AI agents working in this repository.
+
+## What this is
+
+k8coins is a small polyglot microservices app (five services, four languages) used as the throughline demo in Platform Fix's Kubernetes workshops - the same way [podium](https://github.com/platformfix/podium) is. It's public: workshop attendees get pointed at this repo, so its code, CI, and docs are a visible part of the Platform Fix brand. Treat polish and correctness here as reputation-bearing, not optional. See the [README](README.md) for what the app actually does (mining loop, architecture diagram) and its [Dockerfile practices](README.md#dockerfile-practices) section - this file doesn't duplicate either.
+
+## Repository layout
+
+- `rng/`, `hasher/`, `worker/`, `webui/` - the four built services, one directory each, each with its own `Dockerfile`.
+- `compose.yml` - local dev stack (all five services, including the off-the-shelf `redis`).
+- `.github/workflows/` - PR checks (hadolint + build, one per service), release (auto-versioning + GHCR push), commit-lint, pr-lint.
+- `.pre-commit-config.yaml` - local hooks, installed per [CONTRIBUTING.md](CONTRIBUTING.md).
+- `docs/superpowers/` - implementation plans from past sessions, kept for provenance rather than as living docs.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
@@ -58,20 +70,90 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 <!-- END BEADS INTEGRATION -->
 
 
-## Build & Test
-
-_Add your build and test commands here_
+## Building and testing locally
 
 ```bash
-# Example:
-# npm install
-# npm test
+docker compose up
 ```
 
-## Architecture Overview
+Builds and starts all five services. Give it 10-15 seconds, then check
+`http://localhost:8000/json` for a non-zero `hashes` count - that confirms
+the whole loop (`worker` → `rng` → `hasher` → `redis` → `webui`) is actually
+working, not just that containers started. To test one service in
+isolation, build and run just its directory:
 
-_Add a brief overview of your project architecture_
+```bash
+docker build -t k8coins-rng:dev rng
+docker run --rm -p 8001:80 k8coins-rng:dev
+curl localhost:8001/healthz
+```
 
-## Conventions & Patterns
+`hasher` and `worker` need `rng` (and `worker` needs `hasher` too) to
+exercise their real logic beyond a bare health check - `docker compose up`
+is the faster path for anything past a single-service smoke test.
 
-_Add your project-specific conventions here_
+## Architecture
+
+See the [README's Architecture section](README.md#architecture) for the
+service table and mining-loop diagram - this file doesn't duplicate it.
+The dependency graph is deliberately narrow (`worker` is the only service
+that calls more than one neighbour); that's a teaching property of the app,
+not an implementation detail, so don't "simplify" it away if refactoring
+any of the four services.
+
+## Conventions
+
+- **Conventional Commits**, enforced on both commit messages (`commit-lint`)
+  and PR titles (`pr-lint`) - a squash merge takes its message from the PR
+  title, so a sloppy title becomes permanent history. Direct pushes to
+  `main` are blocked by the branch ruleset; open a PR. Full detail in
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Dockerfile practices** (multi-stage builds, numeric UID, pinned
+  dependencies, exec-form healthchecks) are documented once, in the
+  [README](README.md#dockerfile-practices) - that's the canonical home,
+  follow it rather than re-deriving conventions per-service.
+
+## Constraints that matter
+
+This section is deliberately thin - k8coins doesn't have podium's years of
+incident history yet. Add to it as real incidents happen; don't pad it with
+theoretical "good practice" bullets that never actually bit anyone here.
+
+- **`release.yml` auto-versions and releases on every push to `main`.** It
+  infers a semver bump from commit messages since the last tag reachable
+  from `HEAD`, then builds and pushes all four images and cuts a GitHub
+  Release - unconditionally, with no manual gate. This is usually invisible
+  because normal work lands via PR with a clean, ff-only history. It
+  becomes a real hazard the moment `main`'s history or tags get rewritten
+  directly (as happened once, deliberately, for the 2026-08-24 baseline
+  squash): push any tag you want the workflow to see as "the last release"
+  *before* pushing the rewritten `main`, or the workflow will read zero
+  prior tags, infer a bump from the wrong base, and fire off an unintended
+  image build and release. Check the workflow's own version-bump logic in
+  `.github/workflows/release.yml` before touching `main` outside a normal PR merge.
+- **Required review on the `main` branch ruleset is 0, by design, not
+  oversight** - same reasoning as [podium's](https://github.com/platformfix/podium):
+  every PR here is authored under Steve's own GitHub identity, and GitHub
+  hard-blocks a PR author from approving their own PR, so a review
+  requirement wouldn't catch anything - it would just deadlock every PR.
+  Verify the live setting with
+  `gh api repos/platformfix/k8coins/rulesets/21280688 --jq '.rules[] | select(.type=="pull_request").parameters | {required_approving_review_count, require_code_owner_review}'`
+  rather than assuming. The `pull_request`-required rule and the required
+  status checks (`commit-lint`, `pr-lint`) stay on regardless - revisit the
+  review requirement if this repo ever gets a second real contributor, not
+  before.
+- **GHCR package visibility is independent of repo visibility, and
+  changing it needs a `write:packages` OAuth scope the standard `gh` CLI
+  token doesn't carry.** Flipping the repo public does nothing to the four
+  images. The reliable path is the org's package settings UI (Packages →
+  each package → Danger Zone → Change visibility), and that flow has a
+  confirm-the-package-name dialog that's easy to dismiss without noticing -
+  if a visibility change doesn't seem to have stuck, check that the dialog
+  was actually completed before assuming a caching issue - this happened
+  live on 2026-08-24: a first attempt at the UI flow reported success but
+  `gh api orgs/platformfix/packages/container/<name> --jq .visibility`
+  still read `private` afterwards, and a second, more careful pass through
+  the same dialog is what actually flipped it. Verify with that API call,
+  or better, an anonymous pull (`docker pull
+  ghcr.io/platformfix/k8coins-<service>:latest` from a machine with no GHCR
+  credentials configured) - don't trust the settings page alone.
