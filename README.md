@@ -137,11 +137,17 @@ without credentials.
 ## Helm chart
 
 A chart at [`chart/k8coins`](chart/k8coins) deploys all five services to a
-Kubernetes cluster, published as an OCI artifact to GHCR alongside the
-images on every release:
+Kubernetes cluster, published two ways on every release - pick whichever
+suits your environment:
 
 ```bash
+# OCI (no `helm repo add` needed)
 helm install k8coins oci://ghcr.io/platformfix/k8coins --version <version>
+
+# Traditional Helm repo, hosted on GitHub Pages
+helm repo add k8coins https://platformfix.github.io/k8coins
+helm repo update
+helm install k8coins k8coins/k8coins --version <version>
 ```
 
 Omit `--version` to get the latest chart. Each service's image tag
