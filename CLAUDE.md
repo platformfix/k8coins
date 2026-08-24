@@ -4,15 +4,16 @@ Operating guidance for AI agents working in this repository.
 
 ## What this is
 
-k8coins is a small polyglot microservices app (five services, four languages) used as the throughline demo in Platform Fix's Kubernetes workshops - the same way [podium](https://github.com/platformfix/podium) is. It's public: workshop attendees get pointed at this repo, so its code, CI, and docs are a visible part of the Platform Fix brand. Treat polish and correctness here as reputation-bearing, not optional. See the [README](README.md) for what the app actually does (mining loop, architecture diagram) and its [Dockerfile practices](README.md#dockerfile-practices) section - this file doesn't duplicate either.
+k8coins is a small polyglot microservices app (five services, four languages) used as the throughline demo in Platform Fix's Kubernetes workshops - the same way [podium](https://github.com/platformfix/podium) is. It's public: workshop attendees get pointed at this repo, so its code, CI, and docs are a visible part of the Platform Fix brand. Treat polish and correctness here as reputation-bearing, not optional. See the [README](README.md) for a quick start and [docs/architecture.md](docs/architecture.md) for what the app actually does (mining loop, architecture diagram, Dockerfile practices) - this file doesn't duplicate either.
 
 ## Repository layout
 
 - `rng/`, `hasher/`, `worker/`, `webui/` - the four built services, one directory each, each with its own `Dockerfile`.
 - `compose.yml` - local dev stack (all five services, including the off-the-shelf `redis`).
-- `.github/workflows/` - PR checks (hadolint + build, one per service), release (auto-versioning + GHCR push), commit-lint, pr-lint.
+- `chart/k8coins/` - the Helm chart, published two ways on every release; see [docs/helm-chart.md](docs/helm-chart.md).
+- `.github/workflows/` - PR checks (hadolint + build, one per service), release (auto-versioning + GHCR push + chart publish), commit-lint, pr-lint, e2e, scorecard.
 - `.pre-commit-config.yaml` - local hooks, installed per [CONTRIBUTING.md](CONTRIBUTING.md).
-- `docs/superpowers/` - implementation plans from past sessions, kept for provenance rather than as living docs.
+- `docs/` - architecture, Helm chart, releases, and supply-chain detail, kept out of the README to keep it scannable; `docs/superpowers/` specifically is implementation plans from past sessions, kept for provenance rather than as a living doc.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
@@ -94,8 +95,8 @@ is the faster path for anything past a single-service smoke test.
 
 ## Architecture
 
-See the [README's Architecture section](README.md#architecture) for the
-service table and mining-loop diagram - this file doesn't duplicate it.
+See [docs/architecture.md](docs/architecture.md) for the service table and
+mining-loop diagram - this file doesn't duplicate it.
 The dependency graph is deliberately narrow (`worker` is the only service
 that calls more than one neighbour); that's a teaching property of the app,
 not an implementation detail, so don't "simplify" it away if refactoring
@@ -109,9 +110,10 @@ any of the four services.
   `main` are blocked by the branch ruleset; open a PR. Full detail in
   [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Dockerfile practices** (multi-stage builds, numeric UID, pinned
-  dependencies, exec-form healthchecks) are documented once, in the
-  [README](README.md#dockerfile-practices) - that's the canonical home,
-  follow it rather than re-deriving conventions per-service.
+  dependencies, exec-form healthchecks) are documented once, in
+  [docs/architecture.md](docs/architecture.md#dockerfile-practices) - that's
+  the canonical home, follow it rather than re-deriving conventions
+  per-service.
 
 ## Constraints that matter
 
