@@ -126,8 +126,42 @@ jobs:
           sbom-path: sbom.spdx.json
           push-to-registry: true
 
+  chart:
+    needs: version
+    if: needs.version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Chart.yaml's version must be strict semver with no "v" prefix (a
+      # Helm requirement); appVersion keeps the "v" prefix so it matches
+      # the actual image tags pushed above - the chart's default
+      # image.tag (see values.yaml) falls back to appVersion, so an
+      # install with no explicit tag override pulls the image built by
+      # this exact same release.
+      - name: Set chart version
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          sed -i "s/^version: .*/version: ${VERSION#v}/" chart/k8coins/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"${VERSION}\"/" chart/k8coins/Chart.yaml
+
+      - name: Package and push chart
+        run: |
+          helm package chart/k8coins --destination /tmp/chart-out
+          helm push /tmp/chart-out/k8coins-*.tgz oci://ghcr.io/platformfix
+
   tag-and-release:
-    needs: [version, release]
+    needs: [version, release, chart]
     if: needs.version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:

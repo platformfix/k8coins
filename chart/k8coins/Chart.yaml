@@ -1,0 +1,16 @@
+apiVersion: v2
+name: k8coins
+version: 0.0.0-placeholder
+appVersion: "0.0.0-placeholder"
+description: A polyglot microservices demo app for Platform Fix's Kubernetes workshops - five services, four languages, one mining loop.
+keywords:
+  - kubernetes
+  - training
+  - microservices
+type: application
+home: https://github.com/platformfix/k8coins
+sources:
+  - https://github.com/platformfix/k8coins
+maintainers:
+  - name: Platform Fix
+    url: https://platformfix.com

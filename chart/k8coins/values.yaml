@@ -1,0 +1,118 @@
+# Default values for k8coins.
+#
+# IMPORTANT: rng, hasher, worker, and webui reach each other and redis by
+# plain Kubernetes Service DNS name ("http://rng/32", "redis://redis", etc)
+# hardcoded in each service's own source - there's no env var to override
+# it. So the Service names this chart creates are fixed ("rng", "hasher",
+# "worker", "webui", "redis"), not release-name-prefixed like a typical
+# Helm chart. That means only one release of this chart can run per
+# namespace - install a second copy in its own namespace instead of trying
+# to run two releases side by side in the same one.
+
+nameOverride: ""
+
+image:
+  # Registry + repository prefix shared by all four built services; each
+  # service appends its own name (e.g. ghcr.io/platformfix/k8coins-rng).
+  registry: ghcr.io/platformfix
+  # Defaults to Chart.AppVersion when empty - set on --install/--upgrade by
+  # the release workflow, or override explicitly for a dev build.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Per-service settings for the four built services. rng and hasher have no
+# dependencies and no business logic beyond what the README documents;
+# worker is the only one with real logic and the only one whose readiness
+# probe means something beyond "did the process start" (see worker's
+# readinessProbe below). webui is the only one meant to be reached from
+# outside the cluster (see ingress, below).
+services:
+  rng:
+    replicaCount: 1
+    port: 80
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+
+  hasher:
+    replicaCount: 1
+    port: 80
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+
+  worker:
+    replicaCount: 1
+    port: 80
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+
+  webui:
+    replicaCount: 1
+    port: 80
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+
+# DEBUG is the only config the app actually reads from the environment
+# (rng and worker check it; hasher and webui don't) - this ConfigMap is
+# deliberately this thin rather than inventing settings the app doesn't use.
+config:
+  debug: "no"
+
+redis:
+  image: redis:7-alpine
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# webui is the only service with a browser-facing UI (the mining-rate
+# dashboard) - it's the only one this chart ever puts behind an Ingress.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: k8coins.local
+  path: /
+  pathType: Prefix

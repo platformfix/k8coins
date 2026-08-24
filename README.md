@@ -131,12 +131,34 @@ ghcr.io/platformfix/k8coins-webui:<version>
 `redis` isn't built by this repo; pull the upstream `redis:7-alpine` image
 directly.
 
-The four published images are private, inherited from this repo's own
-visibility at the time they were first pushed. GHCR package visibility
-does not follow the repository, so opening this repo up also means
-flipping each of the four packages to public under the org's package
-settings. Until someone does that, an external `docker pull` gets a
-denial rather than the image.
+The four published images are public - anyone can `docker pull` them
+without credentials.
+
+## Helm chart
+
+A chart at [`chart/k8coins`](chart/k8coins) deploys all five services to a
+Kubernetes cluster, published as an OCI artifact to GHCR alongside the
+images on every release:
+
+```bash
+helm install k8coins oci://ghcr.io/platformfix/k8coins --version <version>
+```
+
+Omit `--version` to get the latest chart. Each service's image tag
+defaults to the chart's own `appVersion` (the same version as the images
+built in the same release), so a plain install with no overrides pulls a
+matched set. See [`chart/k8coins/values.yaml`](chart/k8coins/values.yaml)
+for what's configurable - per-service resource requests/limits,
+autoscaling (disabled by default), and an optional Ingress for `webui`
+(also disabled by default; `docker compose`-style access is `kubectl
+port-forward svc/webui 8000:80`).
+
+`rng`, `hasher`, `worker`, and `webui` reach each other and `redis` by a
+fixed Kubernetes Service name hardcoded in each service's own source code
+(there's no environment variable to override it), so this chart's Service
+names are fixed too, not release-name-prefixed like a typical chart. Only
+one release can run per namespace - install a second copy in its own
+namespace rather than trying to run two side by side in one.
 
 ## Versioning and releases
 
