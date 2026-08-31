@@ -110,7 +110,7 @@ jobs:
       # SPDX SBOM for the exact image just pushed (pinned to its digest, not
       # a floating tag), attested and attached alongside the provenance.
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0.24.0
+        uses: anchore/sbom-action@v0.24.2
         with:
           image: ghcr.io/platformfix/k8coins-${{ matrix.service }}@${{ steps.push.outputs.digest }}
           format: spdx-json
