@@ -1,3 +1,9 @@
+x-redis-password: &redis-password
+  # Local dev only - not meant to be secret. Mirrors the Kubernetes Secret
+  # the Helm chart generates for real; this just exercises the same code
+  # path (worker/webui authenticating to redis) without a cluster.
+  REDIS_PASSWORD: k8coins-dev-only
+
 services:
 
   rng:
@@ -14,11 +20,18 @@ services:
     build: webui
     ports:
       - "8000:80"
+    environment:
+      <<: *redis-password
 
   redis:
     image: redis:7-alpine
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      <<: *redis-password
 
   worker:
     build: worker
     ports:
       - "8003:80"
+    environment:
+      <<: *redis-password
