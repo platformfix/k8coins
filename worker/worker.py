@@ -24,7 +24,7 @@ else:
 # Configurable so a delivery can tune the pacing without rebuilding the image.
 SLEEP_SECONDS = float(os.environ.get("SLEEP_SECONDS", "0.1"))
 
-redis = Redis("redis")
+redis = Redis("redis", password=os.environ.get("REDIS_PASSWORD"))
 
 hashes_total = Counter("k8coins_hashes_total", "Total hash attempts made")
 coins_total = Counter("k8coins_coins_total", "Total coins found")
