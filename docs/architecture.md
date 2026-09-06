@@ -71,7 +71,11 @@ business routes it has, if any.
 | `webui` | GET | `/metrics` | Prometheus text: Node process defaults plus `k8coins_webui_json_requests_total` |
 
 `redis` exposes no HTTP surface; it's the off-the-shelf `redis:7-alpine`
-image, probed and administered as redis, not as a web service.
+image, probed and administered as redis, not as a web service. It requires
+a password (`--requirepass`), which `worker` and `webui` - the only two
+services that talk to it - read from a `REDIS_PASSWORD` environment
+variable sourced from a Secret (Helm-generated on first install and
+preserved across upgrades; a fixed local-only value in `compose.yml`).
 
 ## Dockerfile practices
 
