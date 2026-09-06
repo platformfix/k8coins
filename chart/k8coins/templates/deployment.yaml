@@ -26,6 +26,15 @@ spec:
           envFrom:
             - configMapRef:
                 name: k8coins-config
+          {{- if or (eq $name "worker") (eq $name "webui") }}
+          # Only worker and webui talk to redis - rng and hasher never do.
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: k8coins-redis-auth
+                  key: password
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $svc.port }}

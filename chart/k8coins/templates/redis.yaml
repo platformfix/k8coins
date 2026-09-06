@@ -19,6 +19,21 @@ spec:
       containers:
         - name: redis
           image: {{ .Values.redis.image }}
+          # Vanilla redis (unlike bitnami's image) has no REDIS_PASSWORD
+          # convention of its own, so the password is read from the env var
+          # this Secret provides and passed to redis-server as --requirepass
+          # via an explicit shell, rather than baked into the image or a
+          # mounted config file.
+          command:
+            - sh
+            - -c
+            - exec redis-server --requirepass "$REDIS_PASSWORD"
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: k8coins-redis-auth
+                  key: password
           ports:
             - name: redis
               containerPort: 6379
