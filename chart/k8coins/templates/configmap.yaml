@@ -6,3 +6,4 @@ metadata:
     {{- include "k8coins.labels" . | nindent 4 }}
 data:
   DEBUG: {{ .Values.config.debug | quote }}
+  SLEEP_SECONDS: {{ .Values.config.sleepSeconds | quote }}
