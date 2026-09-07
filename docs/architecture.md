@@ -12,7 +12,10 @@
 asks `rng` for 32 random bytes, sends those bytes to `hasher`, and checks
 whether the returned SHA-2 hash starts with `0`. Deliberate sleeps in
 `rng`, `hasher`, and `worker` itself hold that loop to roughly three
-attempts a second, slow enough to watch a counter move. If the hash does
+attempts a second, slow enough to watch a counter move. Each sleep reads
+its duration from a `SLEEP_SECONDS` environment variable (default `0.1`,
+matching this description), settable via the Helm chart's `config.sleepSeconds`
+without rebuilding any image. If the hash does
 start with `0`, that's a coin: the hash and the bytes that produced it go
 into a redis hash called `wallet`. Either way, `worker` tallies how many
 hash attempts it made and periodically adds that count to a redis counter

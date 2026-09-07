@@ -13,6 +13,10 @@ set :bind, '0.0.0.0'
 # production-mode default, applied explicitly so it also covers dev mode.
 set :host_authorization, permitted_hosts: []
 
+# Deliberate delay simulating "a little bit of work" - see docs/architecture.md.
+# Configurable so a delivery can tune the pacing without rebuilding the image.
+SLEEP_SECONDS = ENV.fetch('SLEEP_SECONDS', '0.1').to_f
+
 prometheus = Prometheus::Client.registry
 hashes_total = Prometheus::Client::Counter.new(
     :k8coins_hasher_hashes_total, docstring: 'Total hashes computed')
@@ -20,7 +24,7 @@ prometheus.register(hashes_total)
 
 post '/' do
     # Simulate a bit of delay
-    sleep 0.1
+    sleep SLEEP_SECONDS
     content_type 'text/plain'
     request.body.rewind
     hashes_total.increment

@@ -11,6 +11,10 @@ app = Flask(__name__)
 # Enable debugging if the DEBUG environment variable is set and starts with Y
 app.debug = os.environ.get("DEBUG", "").lower().startswith('y')
 
+# Deliberate delay simulating "a little bit of work" - see docs/architecture.md.
+# Configurable so a delivery can tune the pacing without rebuilding the image.
+SLEEP_SECONDS = float(os.environ.get("SLEEP_SECONDS", "0.1"))
+
 hostname = socket.gethostname()
 
 urandom = os.open("/dev/urandom", os.O_RDONLY)
@@ -46,7 +50,7 @@ def metrics():
 @app.route("/<int:how_many_bytes>")
 def rng(how_many_bytes):
     # Simulate a little bit of delay
-    time.sleep(0.1)
+    time.sleep(SLEEP_SECONDS)
     data = os.read(urandom, how_many_bytes)
     bytes_served.inc(len(data))
     requests_served.inc()

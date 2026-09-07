@@ -91,11 +91,17 @@ services:
       maxReplicas: 5
       targetCPUUtilizationPercentage: 80
 
-# DEBUG is the only config the app actually reads from the environment
-# (rng and worker check it; hasher and webui don't) - this ConfigMap is
-# deliberately this thin rather than inventing settings the app doesn't use.
+# DEBUG and SLEEP_SECONDS are the only config the app actually reads from the
+# environment (rng, hasher, and worker read SLEEP_SECONDS; webui doesn't; only
+# rng and worker check DEBUG) - this ConfigMap is deliberately this thin
+# rather than inventing settings the app doesn't use.
 config:
   debug: "no"
+  # Deliberate delay rng/hasher/worker each simulate per unit of work - see
+  # docs/architecture.md. Matches the services' own hardcoded default, so
+  # leaving this unset changes nothing; tune it to speed up or slow down the
+  # mining rate for a given delivery without rebuilding any image.
+  sleepSeconds: 0.1
 
 redis:
   image: redis:7-alpine

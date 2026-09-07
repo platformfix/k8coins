@@ -20,6 +20,10 @@ else:
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 
+# Deliberate delay simulating "a little bit of work" - see docs/architecture.md.
+# Configurable so a delivery can tune the pacing without rebuilding the image.
+SLEEP_SECONDS = float(os.environ.get("SLEEP_SECONDS", "0.1"))
+
 redis = Redis("redis")
 
 hashes_total = Counter("k8coins_hashes_total", "Total hash attempts made")
@@ -62,7 +66,7 @@ def work_loop(interval=1):
 def work_once():
     global last_progress
     log.debug("Doing one unit of work")
-    time.sleep(0.1)
+    time.sleep(SLEEP_SECONDS)
     random_bytes = get_random_bytes()
     hex_hash = hash_bytes(random_bytes)
     hashes_total.inc()
