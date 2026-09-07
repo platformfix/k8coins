@@ -13,7 +13,7 @@ k8coins is a small polyglot microservices app (five services, four languages) us
 - `chart/k8coins/` - the Helm chart, published two ways on every release; see [docs/helm-chart.md](docs/helm-chart.md).
 - `.github/workflows/` - PR checks (hadolint + build, one per service), release (auto-versioning + GHCR push + chart publish), commit-lint, pr-lint, e2e, scorecard.
 - `.pre-commit-config.yaml` - local hooks, installed per [CONTRIBUTING.md](CONTRIBUTING.md).
-- `docs/` - architecture, Helm chart, releases, and supply-chain detail, kept out of the README to keep it scannable; `docs/superpowers/` specifically is implementation plans from past sessions, kept for provenance rather than as a living doc.
+- `docs/` - architecture, Helm chart, releases, and supply-chain detail, kept out of the README to keep it scannable.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
