@@ -17,6 +17,22 @@ jobs:
       - name: Start the stack
         run: docker compose up -d --build
 
+      - name: Assert redis rejects unauthenticated access
+        run: |
+          output=""
+          for i in $(seq 1 30); do
+            output=$(docker compose exec -T redis redis-cli PING 2>&1 || true)
+            if [ -n "$output" ]; then
+              break
+            fi
+            sleep 2
+          done
+          echo "redis PING (no auth) returned: $output"
+          if ! echo "$output" | grep -q "NOAUTH"; then
+            echo "redis did not reject an unauthenticated PING - the password requirement may have been dropped"
+            exit 1
+          fi
+
       - name: Wait for webui readiness
         run: |
           for i in $(seq 1 30); do
