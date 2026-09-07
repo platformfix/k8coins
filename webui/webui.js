@@ -13,6 +13,7 @@ var jsonRequests = new promClient.Counter({
 
 var client = await createClient({
   url: "redis://redis",
+  password: process.env.REDIS_PASSWORD,
   socket: {
     family: 0
   }
