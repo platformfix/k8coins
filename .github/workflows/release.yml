@@ -36,7 +36,15 @@ jobs:
       - name: Determine version bump from commit messages since last tag
         id: bump
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          # --match 'v*' is load-bearing: the chart job below also pushes
+          # tags shaped k8coins-X.Y.Z (via chart-releaser-action), sharing
+          # this repo's tag namespace. Without the filter, git describe can
+          # return the most recent tag from either namespace - on
+          # 2026-09-07 it returned "k8coins-0.4.1" instead of "v0.4.1",
+          # which fed into the version arithmetic below as if "k8coins-0"
+          # were the major version, producing the malformed "vk8coins-0.5.0"
+          # and failing Helm's strict-semver validation on chart.yaml.
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
           if [ -z "$LAST_TAG" ]; then
             echo "No prior tag found, considering the full commit history"
             LAST_TAG="v0.0.0"
