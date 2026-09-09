@@ -16,9 +16,6 @@ An orchestrator doesn't care what runtime a service is written in - it
 cares whether the container starts, holds a port open, and reports its
 own health.
 
-Adapted from [jpetazzo/container.training](https://github.com/jpetazzo/container.training)'s
-DockerCoins - see [`NOTICE`](NOTICE) for what changed.
-
 ## Running locally
 
 ```bash
