@@ -2,6 +2,27 @@ apiVersion: v1
 entries:
   k8coins:
   - apiVersion: v2
+    appVersion: v0.5.3
+    created: "2026-09-14T10:21:43.873447103Z"
+    description: A polyglot microservices demo app for Platform Fix's Kubernetes workshops
+      - five services, four languages, one mining loop.
+    digest: e09647d34c5403cb7eb80a988e2c2557e3477d17232d84624b8af360acc99ede
+    home: https://github.com/platformfix/k8coins
+    keywords:
+    - kubernetes
+    - training
+    - microservices
+    maintainers:
+    - name: Platform Fix
+      url: https://platformfix.com
+    name: k8coins
+    sources:
+    - https://github.com/platformfix/k8coins
+    type: application
+    urls:
+    - https://github.com/platformfix/k8coins/releases/download/k8coins-0.5.3/k8coins-0.5.3.tgz
+    version: 0.5.3
+  - apiVersion: v2
     appVersion: v0.5.2
     created: "2026-09-12T22:47:48.556605039Z"
     description: A polyglot microservices demo app for Platform Fix's Kubernetes workshops
@@ -85,4 +106,4 @@ entries:
     urls:
     - https://github.com/platformfix/k8coins/releases/download/k8coins-0.4.1/k8coins-0.4.1.tgz
     version: 0.4.1
-generated: "2026-09-12T22:47:48.556621981Z"
+generated: "2026-09-14T10:21:43.873466736Z"
