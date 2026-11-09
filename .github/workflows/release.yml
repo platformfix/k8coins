@@ -189,7 +189,7 @@ jobs:
       # workflow's own v<version> app release tags below), and maintains
       # index.yaml on the gh-pages branch for "helm repo add".
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@df287104677278f869ca5480bd260358397cc3f9 # v1.8.0
+        uses: helm/chart-releaser-action@92c6b97fa9f664492a2592e0d1d80bc6bf378957 # v1.9.0
         with:
           charts_dir: chart
           skip_existing: true
