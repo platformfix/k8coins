@@ -1,3 +1,9 @@
+{{- /*
+redis as a Deployment - the default (redis.kind: Deployment). No storage:
+coins reset whenever the pod restarts. Compare with redis-statefulset.yaml,
+the alternative this chart renders instead when redis.kind is StatefulSet.
+*/}}
+{{- if eq .Values.redis.kind "Deployment" }}
 {{- $ctx := dict "name" "redis" "root" $ }}
 apiVersion: apps/v1
 kind: Deployment
@@ -40,18 +46,4 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  labels:
-    {{- include "k8coins.labels" . | nindent 4 }}
-    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
-spec:
-  selector:
-    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
-  ports:
-    - name: redis
-      port: 6379
-      targetPort: redis
+{{- end }}

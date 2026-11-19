@@ -1,0 +1,74 @@
+{{- /*
+redis as a StatefulSet (redis.kind: StatefulSet). Same container as
+redis-deployment.yaml, plus the three things that make it stateful:
+
+  - serviceName: points at the headless Service in redis-service.yaml,
+    which gives the pod a stable DNS identity (redis-0.redis-headless).
+  - --appendonly yes: redis writes every change to disk, so there is
+    something worth keeping when the pod restarts.
+  - volumeClaimTemplates: the StatefulSet controller creates one
+    PersistentVolumeClaim per pod (data-redis-0) and reattaches the same
+    claim whenever the pod is recreated. Deleting the StatefulSet, or
+    `helm uninstall`, leaves the claim (and the data) behind.
+*/}}
+{{- if eq .Values.redis.kind "StatefulSet" }}
+{{- $ctx := dict "name" "redis" "root" $ }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: redis-headless
+  selector:
+    matchLabels:
+      {{- include "k8coins.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8coins.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          # See redis-deployment.yaml for why the password goes in via an
+          # explicit shell. --appendonly yes turns on persistence.
+          command:
+            - sh
+            - -c
+            - exec redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: k8coins-redis-auth
+                  key: password
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            # /data is the redis image's working directory, where it writes
+            # its append-only file.
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "k8coins.selectorLabels" $ctx | nindent 10 }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- with .Values.redis.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size }}
+{{- end }}
