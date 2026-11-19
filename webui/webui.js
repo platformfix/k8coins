@@ -23,6 +23,46 @@ var client = await createClient({
     })
     .connect();
 
+// Wallet size is read from redis at scrape time rather than counted here:
+// unlike worker's k8coins_coins_total, it survives process restarts. If
+// redis can't answer within a second, the coin sample is dropped for that
+// scrape (rather than repeating a stale number that looks current) and
+// k8coins_wallet_up reports 0 - so /metrics itself never fails or hangs
+// because redis is down. prom-client collects metrics concurrently, so both
+// gauges await one shared read (null on failure) per scrape. The timeout is
+// a race rather than node-redis's abortSignal, because that signal stops
+// applying once a command is on the socket - so it can't bound a redis that
+// accepted the connection but stopped answering.
+var walletRead = null;
+function readWallet() {
+    walletRead ??= Promise.race([
+        client.hLen('wallet'),
+        new Promise((_, reject) => setTimeout(reject, 1000, new Error('redis read timed out')))
+    ])
+        .catch(() => null)
+        .finally(() => { walletRead = null; });
+    return walletRead;
+}
+new promClient.Gauge({
+    name: 'k8coins_wallet_coins',
+    help: 'Coins currently in the redis wallet (absent while redis is unreadable)',
+    async collect() {
+        var coins = await readWallet();
+        if (coins === null) {
+            this.remove();
+        } else {
+            this.set(coins);
+        }
+    }
+});
+new promClient.Gauge({
+    name: 'k8coins_wallet_up',
+    help: 'Whether webui could read the redis wallet on this scrape (1) or not (0)',
+    async collect() {
+        this.set(await readWallet() === null ? 0 : 1);
+    }
+});
+
 var app = express();
 
 app.use(morgan('common'));
