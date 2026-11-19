@@ -33,41 +33,61 @@ namespace rather than trying to run two side by side in one.
 
 ## Running redis as a Deployment or a StatefulSet
 
-`redis.kind` chooses how redis runs. The chart has one template per kind,
-[`redis-deployment.yaml`](../chart/k8coins/templates/redis-deployment.yaml)
-and [`redis-statefulset.yaml`](../chart/k8coins/templates/redis-statefulset.yaml),
-and renders only the one you pick, so you can read the two side by side to
-see exactly what changes.
+Two independent settings control redis:
 
-| `redis.kind` | Storage | What happens when the redis pod restarts |
+- `redis.kind` (`Deployment`, the default, or `StatefulSet`) picks the
+  workload. The chart has one template per kind,
+  [`redis-deployment.yaml`](../chart/k8coins/templates/redis-deployment.yaml)
+  and [`redis-statefulset.yaml`](../chart/k8coins/templates/redis-statefulset.yaml),
+  and renders only the one you pick, so you can read them side by side.
+- `redis.persistence.enabled` (off by default) gives redis a
+  PersistentVolumeClaim and turns on append-only persistence, so coins
+  survive a redis pod restart. With it off, they reset to zero.
+
+| | `persistence.enabled: false` (default) | `persistence.enabled: true` |
 |---|---|---|
-| `Deployment` (default) | None | Coins and hashes reset to zero |
-| `StatefulSet` | A PersistentVolumeClaim (`data-redis-0`), with redis append-only persistence turned on | Coins and hashes carry on from where they were |
+| **`kind: Deployment`** (default) | No storage; `/data` is an emptyDir that goes with the pod. | The chart creates one claim, `redis-data` ([`redis-pvc.yaml`](../chart/k8coins/templates/redis-pvc.yaml)), and the Deployment mounts it. Rolling updates use `maxSurge: 0`, so the old pod releases the volume before the new one starts. |
+| **`kind: StatefulSet`** | No storage; `/data` is an emptyDir. Only the workload kind and its headless Service change. | The StatefulSet creates its own claim, `data-redis-0`, from `volumeClaimTemplates`, and reattaches it to the pod whenever the pod is recreated. |
 
 ```bash
 helm install k8coins oci://ghcr.io/platformfix/k8coins \
   --set redis.kind=StatefulSet \
+  --set redis.persistence.enabled=true \
   --set redis.persistence.size=1Gi \
   --set redis.persistence.storageClass=standard  # omit to use the cluster default
 ```
 
-`redis.persistence.*` only applies in StatefulSet mode. Either way, the app
-reaches redis at the same `redis` Service; StatefulSet mode adds a headless
-`redis-headless` Service as the StatefulSet's `serviceName`.
+Either way, the app reaches redis at the same `redis` Service. StatefulSet
+mode adds a headless `redis-headless` Service as the StatefulSet's
+`serviceName`.
+
+In every combination the redis pod follows the Kubernetes
+[restricted Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted):
+it runs as the image's unprivileged `redis` user, can't escalate privileges,
+drops all Linux capabilities, uses the default seccomp profile, and has a
+read-only root filesystem, so `/data` is the only place it can write. It also
+has readiness and liveness probes, no service-account token, and a pinned
+redis version.
 
 To see the difference, delete the redis pod and watch the `coins` count in
-`webui`'s `/json`: in Deployment mode it drops back to zero, in StatefulSet
-mode it doesn't.
+`webui`'s `/json`. Without persistence it drops back to zero; with
+persistence it carries on.
 
-Two things to know before switching:
+Three things to know before changing these settings on a running release:
 
-- **Switching kinds on an existing release does not carry data across.** A
-  `helm upgrade` that changes `redis.kind` deletes one workload and creates
-  the other, and the new redis starts empty. Moving from StatefulSet to
-  Deployment drops the data; moving from Deployment to StatefulSet has none
-  to bring.
-- **The PersistentVolumeClaim outlives the release.** Kubernetes keeps
-  StatefulSet claims when the StatefulSet is deleted, and `helm uninstall`
-  doesn't remove them either. Delete it yourself when you're done with the
-  data: `kubectl delete pvc data-redis-0`. If you switch back to
-  StatefulSet while the claim still exists, redis picks up the old data.
+- **Switching `redis.kind` does not carry data across.** A `helm upgrade`
+  that changes the kind deletes one workload and creates the other. The two
+  kinds use different claims (`redis-data` and `data-redis-0`), so the new
+  redis starts empty.
+- **The Deployment's claim belongs to the release, but the StatefulSet's
+  doesn't.** The chart creates `redis-data` itself, so `helm uninstall`,
+  switching persistence off, or switching to StatefulSet deletes it and its
+  data. A StatefulSet's claim is created by Kubernetes rather than by Helm,
+  and it's left behind when the StatefulSet goes. Delete it yourself when
+  you're done with the data (`kubectl delete pvc data-redis-0`). If you
+  switch back to StatefulSet with persistence while it still exists, redis
+  picks up the old data.
+- **A Deployment shares one claim across all its pods.** That's fine for
+  this chart's single redis replica, but it's the main reason stateful
+  software that runs more than one replica uses a StatefulSet, which gives
+  each pod a claim of its own.

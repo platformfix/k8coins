@@ -104,15 +104,18 @@ config:
   sleepSeconds: 0.1
 
 redis:
-  image: redis:7-alpine
-  # "Deployment" (default): no storage - coins reset whenever the redis pod
-  # restarts. "StatefulSet": redis gets a PersistentVolumeClaim and
-  # append-only persistence, so coins survive a pod restart. Switching kinds
-  # on an existing release does NOT carry data across - see
+  # Pinned to an exact version so every install runs the same redis.
+  image: redis:7.4.12-alpine
+  # "Deployment" (default) or "StatefulSet" - see templates/redis-*.yaml.
+  # Switching kinds on an existing release does NOT carry data across - see
   # docs/helm-chart.md.
   kind: Deployment
-  # Only used when kind is StatefulSet.
+  # Off (default): no storage - coins reset whenever the redis pod restarts.
+  # On: redis writes to a PersistentVolumeClaim with append-only persistence,
+  # so coins survive a pod restart. Works with either kind; how the claim is
+  # created, and whether it outlives the release, differs between the two.
   persistence:
+    enabled: false
     size: 1Gi
     # Empty uses the cluster's default StorageClass.
     storageClass: ""
