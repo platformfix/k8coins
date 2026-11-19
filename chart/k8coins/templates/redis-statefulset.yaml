@@ -1,0 +1,114 @@
+{{- /*
+redis as a StatefulSet (redis.kind: StatefulSet). The pod is the same as in
+redis-deployment.yaml (see that file for the security settings, probes and
+--appendonly). What differs is the StatefulSet around it:
+
+  - serviceName: points at the headless Service in redis-service.yaml,
+    which gives the pod a stable DNS identity (redis-0.redis-headless).
+  - volumeClaimTemplates (with redis.persistence.enabled): rather than
+    mounting one shared, pre-made claim, the StatefulSet controller creates
+    a claim per pod (data-redis-0) and reattaches that same claim whenever
+    the pod is recreated.
+  - persistentVolumeClaimRetentionPolicy: keeps that claim (and the data)
+    when the StatefulSet is deleted or scaled down. Retain is the Kubernetes
+    default; it's spelled out here so you can see the choice.
+*/}}
+{{- if eq .Values.redis.kind "StatefulSet" }}
+{{- $ctx := dict "name" "redis" "root" $ }}
+{{- $persist := .Values.redis.persistence.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: redis-headless
+  selector:
+    matchLabels:
+      {{- include "k8coins.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8coins.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            {{- if $persist }}
+            - exec redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes
+            {{- else }}
+            - exec redis-server --requirepass "$REDIS_PASSWORD"
+            {{- end }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: k8coins-redis-auth
+                  key: password
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- if not $persist }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if $persist }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "k8coins.selectorLabels" $ctx | nindent 10 }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- with .Values.redis.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size }}
+  {{- end }}
+{{- end }}

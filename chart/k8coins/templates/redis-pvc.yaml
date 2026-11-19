@@ -1,0 +1,26 @@
+{{- /*
+The claim the redis Deployment mounts when redis.persistence.enabled is set.
+The chart creates it directly, so it's part of the Helm release: `helm
+uninstall`, or switching persistence off or redis.kind to StatefulSet,
+deletes it along with its data. A StatefulSet asks for its claim through
+volumeClaimTemplates instead (see redis-statefulset.yaml), and that claim is
+left behind when the StatefulSet goes.
+*/}}
+{{- if and (eq .Values.redis.kind "Deployment") .Values.redis.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" (dict "name" "redis" "root" $) | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.redis.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.redis.persistence.size }}
+{{- end }}

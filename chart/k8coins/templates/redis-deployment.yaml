@@ -1,0 +1,116 @@
+{{- /*
+redis as a Deployment - the default (redis.kind: Deployment). Compare with
+redis-statefulset.yaml, which this chart renders instead when redis.kind is
+StatefulSet; the pod inside is the same in both.
+
+With redis.persistence.enabled, redis writes to the PersistentVolumeClaim in
+redis-pvc.yaml. Without it, /data is an emptyDir that disappears with the pod.
+*/}}
+{{- if eq .Values.redis.kind "Deployment" }}
+{{- $ctx := dict "name" "redis" "root" $ }}
+{{- $persist := .Values.redis.persistence.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  {{- if $persist }}
+  # A rolling update normally starts the new pod before stopping the old one.
+  # A ReadWriteOnce volume can only be attached to one node at a time, so the
+  # new pod could hang waiting for it. maxSurge: 0 (no extra pod) with
+  # maxUnavailable: 1 stops the old pod first. (type: Recreate does the same,
+  # but Kubernetes rejects switching an existing Deployment to it, so turning
+  # persistence on with `helm upgrade` would fail.)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "k8coins.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8coins.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      # redis never talks to the Kubernetes API, so it gets no token.
+      automountServiceAccountToken: false
+      # Run as the image's own unprivileged redis user (uid 999, gid 1000).
+      # fsGroup makes the mounted volume writable by that group.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          imagePullPolicy: IfNotPresent
+          # Vanilla redis (unlike bitnami's image) has no REDIS_PASSWORD
+          # convention of its own, so the password is read from the env var
+          # this Secret provides and passed to redis-server as --requirepass
+          # via an explicit shell, rather than baked into the image or a
+          # mounted config file. --appendonly yes (with persistence) makes
+          # redis write every change to disk.
+          command:
+            - sh
+            - -c
+            {{- if $persist }}
+            - exec redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes
+            {{- else }}
+            - exec redis-server --requirepass "$REDIS_PASSWORD"
+            {{- end }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: k8coins-redis-auth
+                  key: password
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          # Ready once redis answers PING; restarted if it stops accepting
+          # connections at all.
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            # /data is the redis image's working directory, and the only
+            # place it writes (the root filesystem is read-only).
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          {{- if $persist }}
+          persistentVolumeClaim:
+            claimName: redis-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }}

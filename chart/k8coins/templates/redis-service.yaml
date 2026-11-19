@@ -1,0 +1,41 @@
+{{- $kind := .Values.redis.kind }}
+{{- if not (has $kind (list "Deployment" "StatefulSet")) }}
+{{- fail (printf "redis.kind must be \"Deployment\" or \"StatefulSet\", got %q" $kind) }}
+{{- end }}
+{{- $ctx := dict "name" "redis" "root" $ }}
+{{- /* The address worker and webui connect to (redis://redis), whichever kind runs redis. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+spec:
+  selector:
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+{{- if eq $kind "StatefulSet" }}
+---
+# Headless (clusterIP: None) Service the StatefulSet's serviceName points
+# at. It gives each pod its own DNS record rather than one load-balanced IP;
+# the app itself keeps using the "redis" Service above.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  labels:
+    {{- include "k8coins.labels" . | nindent 4 }}
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "k8coins.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+{{- end }}
