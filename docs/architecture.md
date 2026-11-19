@@ -43,39 +43,8 @@ stalls, but `webui` keeps serving whatever counts it last read.
 
 ## Endpoints
 
-Every service listens on port 80 (mapped locally per the ports in the
-[README](../README.md#running-locally)). Each one carries the same three
-operational routes - `/healthz`, `/live`, `/metrics` - on top of whatever
-business routes it has, if any.
-
-| Service | Method | Path | Purpose |
-|---|---|---|---|
-| `rng` | GET | `/` | Plain-text identity check: `RNG running on <hostname>` |
-| `rng` | GET | `/<n>` | Returns `n` random bytes from `/dev/urandom` |
-| `rng` | GET | `/healthz` | Always `ok`; `rng` has no external dependencies |
-| `rng` | GET | `/live` | Always `ok` |
-| `rng` | GET | `/metrics` | Prometheus text: `k8coins_rng_bytes_served_total`, `k8coins_rng_requests_served_total` |
-| `hasher` | GET | `/` | Plain-text identity check: `HASHER running on <hostname>` |
-| `hasher` | POST | `/` | Hashes the request body (SHA-2), returns the hex digest |
-| `hasher` | GET | `/healthz` | Always `ok`; `hasher` has no external dependencies |
-| `hasher` | GET | `/live` | Always `ok` |
-| `hasher` | GET | `/metrics` | Prometheus text: `k8coins_hasher_hashes_total` |
-| `worker` | GET | `/healthz` | `ok`, or `503` if no successful `rng`+`hasher` round trip in the last 30s. `worker` has no other HTTP surface - this is the only way to see it directly |
-| `worker` | GET | `/live` | Always `ok` |
-| `worker` | GET | `/metrics` | Prometheus text: `k8coins_hashes_total`, `k8coins_coins_total` - the real, authoritative counters |
-| `webui` | GET | `/` | Redirects to `/index.html` |
-| `webui` | GET | `/index.html` | The mining-rate dashboard (static, served from `files/`) |
-| `webui` | GET | `/json` | `{coins, hashes, now}`, polled by the dashboard once a second, read from redis |
-| `webui` | GET | `/healthz` | Always `ok` - deliberately does not check redis connectivity, since `webui` is designed to keep serving its last-known counts when a dependency is down |
-| `webui` | GET | `/live` | Always `ok` |
-| `webui` | GET | `/metrics` | Prometheus text: Node process defaults plus `k8coins_webui_json_requests_total` |
-
-`redis` exposes no HTTP surface; it's the off-the-shelf `redis:7-alpine`
-image, probed and administered as redis, not as a web service. It requires
-a password (`--requirepass`), which `worker` and `webui` - the only two
-services that talk to it - read from a `REDIS_PASSWORD` environment
-variable sourced from a Secret (Helm-generated on first install and
-preserved across upgrades; a fixed local-only value in `compose.yml`).
+The endpoints every service exposes are listed in the
+[README](../README.md#endpoints), so there's one copy to keep current.
 
 ## Dockerfile practices
 
