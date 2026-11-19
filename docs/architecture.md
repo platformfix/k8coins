@@ -68,7 +68,7 @@ business routes it has, if any.
 | `webui` | GET | `/json` | `{coins, hashes, now}`, polled by the dashboard once a second, read from redis |
 | `webui` | GET | `/healthz` | Always `ok` - deliberately does not check redis connectivity, since `webui` is designed to keep serving its last-known counts when a dependency is down |
 | `webui` | GET | `/live` | Always `ok` |
-| `webui` | GET | `/metrics` | Prometheus text: Node process defaults plus `k8coins_webui_json_requests_total` |
+| `webui` | GET | `/metrics` | Prometheus text: Node process defaults, `k8coins_webui_json_requests_total`, and `k8coins_wallet_coins` (the redis `wallet` size - the same number as `/json`'s `coins`, and unlike `worker`'s counter it survives restarts). Read from redis at scrape time with a 1s timeout; while redis is unreadable the coin sample is omitted and `k8coins_wallet_up` reads `0`, so the scrape itself never fails or hangs |
 
 `redis` exposes no HTTP surface; it's the off-the-shelf `redis:7-alpine`
 image, probed and administered as redis, not as a web service. It requires

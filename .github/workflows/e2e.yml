@@ -57,6 +57,13 @@ jobs:
             exit 1
           fi
 
+      - name: Assert webui exports the wallet size
+        run: |
+          metrics=$(curl -sf http://localhost:8000/metrics)
+          echo "$metrics" | grep '^k8coins_wallet'
+          echo "$metrics" | grep -qx 'k8coins_wallet_up 1' || { echo "k8coins_wallet_up is not 1 with redis healthy"; exit 1; }
+          echo "$metrics" | grep -q '^k8coins_wallet_coins [0-9]' || { echo "k8coins_wallet_coins missing with redis healthy"; exit 1; }
+
       - name: Dump logs on failure
         if: failure()
         run: docker compose logs
